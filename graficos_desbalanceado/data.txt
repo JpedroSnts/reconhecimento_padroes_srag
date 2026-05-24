@@ -1,0 +1,8 @@
+              precision    recall  f1-score   support
+
+    Cura (0)       0.82      0.94      0.88    605282
+   Óbito (1)       0.62      0.33      0.43    185080
+
+    accuracy                           0.80    790362
+   macro avg       0.72      0.64      0.66    790362
+weighted avg       0.78      0.80      0.77    790362
