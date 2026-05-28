@@ -2,6 +2,8 @@ import pandas as pd
 import glob
 import os
 
+from ydata_profiling import ProfileReport
+
 caminho_pasta = 'datasets'
 
 arquivos = glob.glob(os.path.join(caminho_pasta, "INFLUD*.csv"))
@@ -24,17 +26,21 @@ df_filtrado = pd.concat(
 # Usamos strings e inteiros na lista para evitar problemas de tipagem na leitura do CSV
 df_filtrado = df_filtrado[df_filtrado['EVOLUCAO'].isin([1, 2, '1', '2'])]
 
+
+ProfileReport(df_filtrado, title="Relatório - DATASETFINAL", minimal=True).to_file("relatorio_sem_binarizar.html")
+
 colunas_1_2_9 = [
     'PUERPERA', 'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 
     'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 
     'IMUNODEPRE', 'RENAL', 'OBESIDADE', 'OUT_MORBI', 'NOSOCOMIAL',
     'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA', 'DESC_RESP', 'SATURACAO',
-    'DIARREIA', 'VOMITO', 'OUTRO_SIN', 'FATOR_RISC', 'VACINA',
+    'DIARREIA', 'VOMITO', 'OUTRO_SIN', 'FATOR_RISC',
     'ANTIVIRAL', 'HOSPITAL', 'UTI'
 ]
 
 # Aplica a regra: Se for 1 (numero ou string) vira 1. Qualquer outra coisa (2, 9, NaN) vira 0.
 for col in colunas_1_2_9:
+    df_filtrado = df_filtrado[df_filtrado[col].isin([1, '1', 1.0, '1.0', 2, '2', 2.0, '2.0'])]
     df_filtrado[col] = df_filtrado[col].isin([1, '1', 1.0, '1.0']).astype(int)
 
 # NOVO: Imputação de valores nulos pela Mediana
@@ -98,3 +104,5 @@ caminho_final = 'datasets/DATASETFINAL.csv'
 df_filtrado.to_csv(caminho_final, sep=';', index=False)
 
 print(f"Sucesso! Seu novo dataset está limpo, padronizado e salvo como '{caminho_final}'.")
+
+ProfileReport(df_filtrado, title="Relatório - DATASETFINAL", minimal=True).to_file("relatorio_binarizado.html")

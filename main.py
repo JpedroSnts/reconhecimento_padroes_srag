@@ -16,12 +16,11 @@ if TIPO not in ['1', '2', '3']:
 df = pd.read_csv('datasets/DATASETFINAL.csv', sep=';')
 
 features = [
-    'FAIXA_ETARIA', 'CS_SEXO',
-    'PUERPERA', 'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN',
-    'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI',
-    'IMUNODEPRE', 'RENAL', 'OBESIDADE',
-    'DISPNEIA', 'SATURACAO', 'DESC_RESP',
-    'UTI', 'SUPORT_VEN'
+    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA', 
+    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO', 'OUTRO_SIN',
+    'CARDIOPATI', 'HEMATOLOGI',
+    'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE', 
+    'RENAL', 'OBESIDADE', 'OUT_MORBI', 'ANTIVIRAL', 'UTI', 'SUPORT_VEN'
 ]
 
 X = df[features].apply(pd.to_numeric, errors='coerce').fillna(0)
@@ -53,7 +52,15 @@ elif TIPO == '3':
     smote = SMOTE(sampling_strategy={1: n_obitos_alvo}, random_state=42, k_neighbors=5)
     X_train_bal, y_train_bal = smote.fit_resample(X_train_real, y_train_real)
 
-rf = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)
+rf = RandomForestClassifier(
+    n_estimators=200, 
+    max_depth=10, 
+    min_samples_split=20,
+    min_samples_leaf=10, 
+    class_weight={0: 1.5, 1: 1.0}, 
+    random_state=42, 
+    n_jobs=-1
+)
 rf.fit(X_train_bal, y_train_bal)
 
 y_pred = rf.predict(X_test_real)
