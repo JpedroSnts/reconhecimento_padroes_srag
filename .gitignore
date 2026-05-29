@@ -3,3 +3,6 @@
 /apagar
 /.vscode
 OLD
+__pycache__
+.openclaude
+.claude

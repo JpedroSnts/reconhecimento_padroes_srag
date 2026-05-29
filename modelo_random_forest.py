@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,7 +119,9 @@ def salvar_importancia_features(modelo, features):
 
 
 def main():
-    os.makedirs(PASTA_SAIDA, exist_ok=True)
+    if os.path.exists(PASTA_SAIDA):
+        shutil.rmtree(PASTA_SAIDA)
+    os.makedirs(PASTA_SAIDA)
 
     df = pd.read_csv(DATASET, sep=';')
 
