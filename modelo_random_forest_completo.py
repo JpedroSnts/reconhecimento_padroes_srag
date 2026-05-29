@@ -17,6 +17,11 @@ from sklearn.model_selection import train_test_split
 DATASET = 'datasets/DATASETFINAL_COMPLETO.csv'
 PASTA_SAIDA = 'graficos_modelo_rf_completo'
 ALVO = 'OBITO'
+FEATURES_SELECIONADAS = [
+    'SUPORT_VEN', 'IDADE_ANOS', 'UTI', 'CLASSI_FIN', 'FATOR_RISC',
+    'VACINA_COV', 'HOSPITAL', 'SATURACAO', 'TOSSE', 'CARDIOPATI',
+    'PCR_SARS2', 'CS_ESCOL_N'
+]
 
 
 def avaliar_thresholds(y_real, y_prob):
@@ -117,10 +122,11 @@ def main():
 
     df = pd.read_csv(DATASET, sep=';')
 
-    if ALVO not in df.columns:
-        raise ValueError(f'Coluna alvo ausente: {ALVO}')
+    colunas_ausentes = [coluna for coluna in FEATURES_SELECIONADAS + [ALVO] if coluna not in df.columns]
+    if colunas_ausentes:
+        raise ValueError(f'Colunas ausentes no dataset: {colunas_ausentes}')
 
-    features = [coluna for coluna in df.columns if coluna != ALVO]
+    features = FEATURES_SELECIONADAS
     X = df[features].apply(pd.to_numeric, errors='coerce').fillna(-1)
     y = pd.to_numeric(df[ALVO], errors='coerce')
 

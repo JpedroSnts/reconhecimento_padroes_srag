@@ -9,22 +9,16 @@ PADRAO_ARQUIVOS = os.path.join(CAMINHO_PASTA, 'INFLUD*.csv')
 CAMINHO_FINAL = os.path.join(CAMINHO_PASTA, 'DATASETFINAL_COMPLETO.csv')
 
 COLUNAS_DEMOGRAFICAS = [
-    'CS_SEXO', 'NU_IDADE_N', 'TP_IDADE', 'CS_GESTANT', 'CS_RACA'
+    'NU_IDADE_N', 'TP_IDADE', 'CS_ESCOL_N'
 ]
 
 COLUNAS_BINARIAS = [
-    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA',
-    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO',
-    'DOR_ABD', 'FADIGA', 'FATOR_RISC',
-    'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 'HEPATICA',
-    'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE',
-    'RENAL', 'OBESIDADE', 'VACINA', 'HOSPITAL',
-    'VACINA_COV', 'ANTIVIRAL', 'UTI', 'AMOSTRA'
+    'UTI', 'FATOR_RISC', 'VACINA_COV', 'HOSPITAL', 'SATURACAO',
+    'TOSSE', 'CARDIOPATI'
 ]
 
 COLUNAS_CATEGORICAS = [
-    'CS_GESTANT', 'CS_RACA', 'SUPORT_VEN',
-    'RAIOX_RES', 'PCR_RESUL', 'PCR_SARS2', 'CLASSI_FIN'
+    'SUPORT_VEN', 'CLASSI_FIN', 'PCR_SARS2', 'CS_ESCOL_N'
 ]
 
 COLUNAS_DESEJADAS = list(dict.fromkeys(
@@ -55,16 +49,6 @@ def corrigir_idade(df):
 
     df['IDADE_ANOS'] = idade_anos.abs()
     df = df[(df['IDADE_ANOS'].notna()) & (df['IDADE_ANOS'] <= 110)].copy()
-
-    limites_idade = [0, 5, 9, 19, 39, 59, 79, float('inf')]
-    categorias_idade = [1, 2, 3, 4, 5, 6, 7]
-
-    df['FAIXA_ETARIA'] = pd.cut(
-        df['IDADE_ANOS'],
-        bins=limites_idade,
-        labels=categorias_idade,
-        include_lowest=True,
-    ).astype(int)
 
     return df.drop(columns=['NU_IDADE_N', 'TP_IDADE'])
 
@@ -105,9 +89,8 @@ def main():
     df['OBITO'] = df['EVOLUCAO'].map({1: 0, 2: 1}).astype(int)
     df = df.drop(columns=['EVOLUCAO'])
 
-    print('Corrigindo idade e sexo...')
+    print('Corrigindo idade...')
     df = corrigir_idade(df)
-    df = corrigir_sexo(df)
 
     print('Mapeando variáveis binárias e categóricas...')
     for coluna in COLUNAS_BINARIAS:
@@ -117,10 +100,9 @@ def main():
         df[coluna] = mapear_categorica(df[coluna])
 
     colunas_finais = [
-        'CS_SEXO', 'IDADE_ANOS', 'FAIXA_ETARIA',
-        *COLUNAS_BINARIAS,
-        *COLUNAS_CATEGORICAS,
-        'OBITO',
+        'SUPORT_VEN', 'IDADE_ANOS', 'UTI', 'CLASSI_FIN', 'FATOR_RISC',
+        'VACINA_COV', 'HOSPITAL', 'SATURACAO', 'TOSSE', 'CARDIOPATI',
+        'PCR_SARS2', 'OBITO', 'CS_ESCOL_N'
     ]
     colunas_finais = list(dict.fromkeys(colunas_finais))
     df = df[colunas_finais]
