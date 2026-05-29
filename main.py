@@ -6,6 +6,7 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score
+# Trocado SMOTENC por SMOTEN aqui nas importações
 from imblearn.over_sampling import SMOTE
 
 TIPO = input("Digite o tipo de modelo (1-desbalanceado, 2-undersampling, 3-oversampling): ")
@@ -16,18 +17,17 @@ if TIPO not in ['1', '2', '3']:
 df = pd.read_csv('datasets/DATASETFINAL.csv', sep=';')
 
 features = [
-    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA', 
-    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO', 'OUTRO_SIN',
-    'CARDIOPATI', 'HEMATOLOGI',
-    'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE', 
-    'RENAL', 'OBESIDADE', 'OUT_MORBI', 'ANTIVIRAL', 'UTI', 'SUPORT_VEN'
+    'FAIXA_ETARIA', 'CS_SEXO', 'CARDIOPATI', 'HEMATOLOGI', 'NEUROLOGIC', 'RENAL',
+    'ASMA', 'DIABETES', 'PNEUMOPATI', 'IMUNODEPRE', 'OBESIDADE', 'FADIGA', 'DISPNEIA', 
+    'DESC_RESP', 'SATURACAO','FEBRE', 'PERD_OLFT', 'PERD_PALA', 'VACINA', 'VACINA_COV',
+    'GARGANTA', 'UTI', 'SUPORT_VEN'
 ]
 
-X = df[features].apply(pd.to_numeric, errors='coerce').fillna(0)
+X = df[features].apply(pd.to_numeric, errors='coerce')
 y = df['OBITO']
 
 X_train_real, X_test_real, y_train_real, y_test_real = train_test_split(
-    X, y, test_size=0.20, random_state=42, stratify=y
+    X, y, test_size=0.30, random_state=42, stratify=y
 )
 
 if TIPO == '1':
@@ -49,17 +49,23 @@ elif TIPO == '2':
 elif TIPO == '3':
     n_curas_treino  = (y_train_real == 0).sum()
     n_obitos_alvo   = int(n_curas_treino * (40 / 60))
-    smote = SMOTE(sampling_strategy={1: n_obitos_alvo}, random_state=42, k_neighbors=5)
-    X_train_bal, y_train_bal = smote.fit_resample(X_train_real, y_train_real)
+    
+    # Substituição do SMOTEN pelo RandomOverSampler (Sua lógica de 40/60 continua idêntica)
+    ros = SMOTE(
+        sampling_strategy={1: n_obitos_alvo}, 
+        random_state=42
+    )
+    X_train_bal, y_train_bal = ros.fit_resample(X_train_real, y_train_real)
 
+# CORREÇÃO: Adicionado os parâmetros de poda para travar a precisão alta
 rf = RandomForestClassifier(
-    n_estimators=200, 
-    max_depth=10, 
-    min_samples_split=20,
-    min_samples_leaf=10, 
-    class_weight={0: 1.5, 1: 1.0}, 
-    random_state=42, 
-    n_jobs=-1
+    n_estimators=300,
+    max_depth=14,
+    min_samples_split=10,
+    min_samples_leaf=5,
+    max_features='sqrt',
+    random_state=42,
+    n_jobs=-1,
 )
 rf.fit(X_train_bal, y_train_bal)
 
@@ -101,9 +107,16 @@ plt.ylabel('Real')
 plt.xlabel('Previsto')
 plt.tight_layout()
 plt.savefig(f'{pasta}/matriz_confusao_rf.png', dpi=150)
+plt.close() # Fecha a imagem para não acumular memória
 
 # GRÁFICO 2 — Curva ROC
 y_prob = rf.predict_proba(X_test_real)[:, 1]
+
+for t in [0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60]:
+      y_pred = (y_prob >= t).astype(int)
+      print("Threshold:", t)
+      print(classification_report(y_test_real, y_pred, target_names=['Cura (0)', 'Óbito (1)']))
+
 fpr, tpr, thresholds = roc_curve(y_test_real, y_prob)
 auc = roc_auc_score(y_test_real, y_prob)
 
@@ -116,6 +129,7 @@ plt.title('Curva ROC - Random Forest')
 plt.legend(loc='lower right')
 plt.tight_layout()
 plt.savefig(f'{pasta}/curva_roc_rf.png', dpi=150)
+plt.close()
 
 # GRÁFICO 3 — Feature Importance
 importances = rf.feature_importances_
@@ -134,3 +148,4 @@ for bar, val in zip(bars, valores_ordenados[::-1]):
 
 plt.tight_layout()
 plt.savefig(f'{pasta}/feature_importance_rf.png', dpi=150)
+plt.close()

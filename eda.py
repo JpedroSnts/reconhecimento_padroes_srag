@@ -25,7 +25,6 @@ sexo_labels = {'M': 'Masculino', 'F': 'Feminino'}  # CS_SEXO é string no CSV
 
 # Tipos corretos
 df['FAIXA_ETARIA'] = pd.to_numeric(df['FAIXA_ETARIA'], errors='coerce')
-df['NU_IDADE_N']   = pd.to_numeric(df['NU_IDADE_N'],   errors='coerce')
 df['OBITO']        = pd.to_numeric(df['OBITO'],         errors='coerce')
 df['CS_SEXO']      = df['CS_SEXO'].astype(str).str.strip().str.upper()
 
@@ -35,38 +34,6 @@ df['SEXO_LABEL']  = df['CS_SEXO'].map(sexo_labels)  # 'I' vira NaN, ignorado
 
 ordem_faixas = list(faixa_labels.values())
 cores_sexo   = {'Masculino': '#2E86AB', 'Feminino': '#E84855'}
-
-# ──────────────────────────────────────────────
-# GRÁFICO 1 — Boxplot: Distribuição de Idade por Faixa Etária x Sexo
-# ──────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(12, 6))
-
-df_box = df.dropna(subset=['FAIXA_LABEL', 'SEXO_LABEL', 'NU_IDADE_N'])
-
-sns.boxplot(
-    data=df_box,
-    x='FAIXA_LABEL',
-    y='NU_IDADE_N',
-    hue='SEXO_LABEL',
-    order=ordem_faixas,
-    hue_order=['Masculino', 'Feminino'],
-    palette=cores_sexo,
-    width=0.55,
-    linewidth=1.2,
-    flierprops=dict(marker='o', markersize=3, alpha=0.4),
-    ax=ax
-)
-
-ax.set_title('Distribuição de Idade por Faixa Etária e Sexo', fontsize=14, fontweight='bold', pad=15)
-ax.set_xlabel('Faixa Etária', fontsize=11)
-ax.set_ylabel('Idade (anos)', fontsize=11)
-handles = [mpatches.Patch(color=cores_sexo[s], label=s) for s in ['Masculino', 'Feminino']]
-ax.legend(handles=handles, title='Sexo', fontsize=10)
-ax.grid(axis='y', linestyle='--', alpha=0.5)
-sns.despine()
-
-plt.tight_layout()
-plt.savefig(f'{pasta}/boxplot_faixa_sexo.png', dpi=150)
 
 # ──────────────────────────────────────────────
 # GRÁFICO 2 — Colunas: Número de Casos por Faixa Etária x Sexo
@@ -110,12 +77,12 @@ plt.savefig(f'{pasta}/colunas_faixa_sexo.png', dpi=150)
 # GRÁFICO 3 — Matriz de Correlação: Features x Óbito
 # ──────────────────────────────────────────────
 features_corr = [
-    'FAIXA_ETARIA', 'PUERPERA', 'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 
-    'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 
-    'IMUNODEPRE', 'RENAL', 'OBESIDADE', 'OUT_MORBI', 'NOSOCOMIAL',
-    'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA', 'DESC_RESP', 'SATURACAO',
-    'DIARREIA', 'VOMITO', 'OUTRO_SIN', 'FATOR_RISC',
-    'ANTIVIRAL', 'HOSPITAL', 'UTI', 'SUPORT_VEN', 'OBITO'
+    'FAIXA_ETARIA', 'CS_SEXO', 'PUERPERA', 'CARDIOPATI', 'HEMATOLOGI', 
+    'SIND_DOWN', 'HEPATICA', 'ASMA', 'DIABETES', 'NEUROLOGIC', 
+    'PNEUMOPATI', 'IMUNODEPRE', 'RENAL', 'OBESIDADE', 'OUT_MORBI', 
+    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA', 
+    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO', 'OUTRO_SIN', 
+    'ANTIVIRAL', 'HOSPITAL', 'UTI', 'SUPORT_NAO_INVASIVO', 'SUPORT_INVASIVO', 'OBITO'
 ]
 
 features_presentes = [f for f in features_corr if f in df.columns]

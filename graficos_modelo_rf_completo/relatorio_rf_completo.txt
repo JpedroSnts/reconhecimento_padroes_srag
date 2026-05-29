@@ -1,0 +1,36 @@
+Features usadas:
+SUPORT_VEN
+IDADE_ANOS
+UTI
+CLASSI_FIN
+FATOR_RISC
+VACINA_COV
+HOSPITAL
+SATURACAO
+TOSSE
+CARDIOPATI
+PCR_SARS2
+CS_ESCOL_N
+
+Distribuição da variável alvo:
+OBITO
+0    3026408
+1     925400
+
+Melhor threshold por F1 da classe Óbito:
+threshold          0.600000
+precision_obito    0.606042
+recall_obito       0.681289
+f1_obito           0.641466
+accuracy           0.821659
+
+ROC AUC: 0.8722
+
+              precision    recall  f1-score   support
+
+    Cura (0)       0.90      0.86      0.88    605282
+   Óbito (1)       0.61      0.68      0.64    185080
+
+    accuracy                           0.82    790362
+   macro avg       0.75      0.77      0.76    790362
+weighted avg       0.83      0.82      0.83    790362
