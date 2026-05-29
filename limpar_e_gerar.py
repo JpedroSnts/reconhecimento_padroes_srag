@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
+from ydata_profiling import ProfileReport
 
 CAMINHO_PASTA = 'datasets'
 PADRAO_ARQUIVOS = os.path.join(CAMINHO_PASTA, 'INFLUD*.csv')
@@ -109,6 +110,8 @@ def main():
     ]
     colunas_finais = list(dict.fromkeys(colunas_finais))
     df = df[colunas_finais]
+
+    ProfileReport(df, title="Relatório - DATASETFINAL", minimal=True).to_file("relatorio.html")
 
     os.makedirs(CAMINHO_PASTA, exist_ok=True)
     df.to_csv(CAMINHO_FINAL, sep=';', index=False)
