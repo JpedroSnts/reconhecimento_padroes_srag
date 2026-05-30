@@ -17,12 +17,7 @@ OBITO
 0    3026408
 1     925400
 
-Melhor threshold por F1 da classe Óbito:
-threshold          0.600000
-precision_obito    0.606042
-recall_obito       0.681289
-f1_obito           0.641466
-accuracy           0.821659
+Threshold utilizado: 0.6
 
 ROC AUC: 0.8722
 

@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-DATASET = 'datasets/DATASETFINAL_COMPLETO.csv'
-PASTA = 'graficos_eda_completo'
+DATASET = 'datasets/DATASETFINAL.csv'
+PASTA = 'graficos_eda'
 
 BINARIAS = ['UTI', 'FATOR_RISC', 'VACINA_COV', 'HOSPITAL', 'SATURACAO', 'TOSSE', 'CARDIOPATI']
 CATEGORICAS = ['SUPORT_VEN', 'CLASSI_FIN', 'PCR_SARS2', 'CS_ESCOL_N']
@@ -18,9 +18,9 @@ LABELS_SUPORT_VEN = {1: 'Sim, invasivo', 2: 'Sim, não invasivo', 3: 'Não', -1:
 LABELS_CLASSI_FIN = {1: 'SRAG por Influenza', 2: 'SRAG por outro vírus', 3: 'SRAG por outro agente',
                      4: 'Não especificado', 5: 'COVID-19', -1: 'Ignorado'}
 LABELS_PCR        = {1: 'Positivo', 2: 'Negativo', 3: 'Inconclusivo', -1: 'Ignorado'}
-LABELS_ESCOL      = {0: 'Sem escolaridade', 1: 'Fund. incompleto', 2: 'Fund. completo',
-                     3: 'Médio incompleto', 4: 'Médio completo', 5: 'Superior incompleto',
-                     6: 'Superior completo', -1: 'Ignorado'}
+LABELS_ESCOL      = {0: 'Sem escolaridade/Analfabeto', 1: 'Fund. 1º ciclo (1ª-5ª)',
+                     2: 'Fund. 2º ciclo (6ª-9ª)', 3: 'Médio (1º-3º ano)',
+                     4: 'Superior', 5: 'Não se aplica', -1: 'Ignorado'}
 LABELS_BINARIA    = {1: 'Sim', 0: 'Não', -1: 'Ignorado'}
 
 COR_CURA  = '#2E86AB'
@@ -300,6 +300,39 @@ def grafico_escolaridade(df):
     plt.close()
 
 
+# ── Gráfico 9: Idade por desfecho, estratificado por escolaridade ────────────
+def grafico_idade_por_escolaridade(df):
+    escolaridades = [k for k in sorted(LABELS_ESCOL) if k != -1]  # níveis 0–5
+
+    df_base = df[df['IDADE_ANOS'].notna() & df['OBITO'].notna() & (df['CS_ESCOL_N'] != -1)].copy()
+    df_base['Desfecho'] = df_base['OBITO'].map({0: 'Cura', 1: 'Óbito'})
+
+    fig, axes = plt.subplots(3, 2, figsize=(13, 12))
+    axes = axes.flatten()
+
+    for i, escol in enumerate(escolaridades):
+        label = LABELS_ESCOL[escol]
+        df_e = df_base[df_base['CS_ESCOL_N'] == escol]
+        ax = axes[i]
+
+        for desfecho, cor in [('Cura', COR_CURA), ('Óbito', COR_OBITO)]:
+            dados = df_e[df_e['Desfecho'] == desfecho]['IDADE_ANOS']
+            ax.hist(dados, bins=30, alpha=0.6, color=cor, label=desfecho, edgecolor='white')
+
+        ax.set_title(label, fontsize=11, fontweight='bold')
+        ax.set_xlabel('Idade (anos)')
+        ax.set_ylabel('Frequência')
+        ax.legend(fontsize=9)
+        ax.grid(axis='y', linestyle='--', alpha=0.5)
+        sns.despine(ax=ax)
+
+    plt.suptitle('Distribuição de Idade por Desfecho — Estratificado por Escolaridade',
+                 fontsize=13, fontweight='bold', y=1.01)
+    plt.tight_layout()
+    plt.savefig(f'{PASTA}/09_idade_por_escolaridade.png', dpi=150, bbox_inches='tight')
+    plt.close()
+
+
 def main():
     if os.path.exists(PASTA):
         shutil.rmtree(PASTA)
@@ -310,21 +343,23 @@ def main():
 
     print('Gerando gráficos...')
     grafico_distribuicao_alvo(df)
-    print('  1/8 — Distribuição do alvo')
+    print('  1/9 — Distribuição do alvo')
     grafico_idade_por_desfecho(df)
-    print('  2/8 — Idade por desfecho')
+    print('  2/9 — Idade por desfecho')
     grafico_taxa_obito_binarias(df)
-    print('  3/8 — Taxa de óbito por variáveis binárias')
+    print('  3/9 — Taxa de óbito por variáveis binárias')
     grafico_correlacao(df)
-    print('  4/8 — Matriz de correlação')
+    print('  4/9 — Matriz de correlação')
     grafico_suport_ven(df)
-    print('  5/8 — Suporte ventilatório')
+    print('  5/9 — Suporte ventilatório')
     grafico_classi_fin(df)
-    print('  6/8 — Classificação final')
+    print('  6/9 — Classificação final')
     grafico_vacina_cov(df)
-    print('  7/8 — Vacinação COVID-19')
+    print('  7/9 — Vacinação COVID-19')
     grafico_escolaridade(df)
-    print('  8/8 — Escolaridade')
+    print('  8/9 — Escolaridade')
+    grafico_idade_por_escolaridade(df)
+    print('  9/9 — Idade por escolaridade')
 
     print(f'\nGráficos salvos em: {PASTA}/')
 

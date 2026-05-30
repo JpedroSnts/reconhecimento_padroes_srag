@@ -1,5 +1,6 @@
 import glob
 import os
+import sqlite3
 
 import numpy as np
 import pandas as pd
@@ -7,7 +8,8 @@ from ydata_profiling import ProfileReport
 
 CAMINHO_PASTA = 'datasets'
 PADRAO_ARQUIVOS = os.path.join(CAMINHO_PASTA, 'INFLUD*.csv')
-CAMINHO_FINAL = os.path.join(CAMINHO_PASTA, 'DATASETFINAL_COMPLETO.csv')
+CAMINHO_FINAL = os.path.join(CAMINHO_PASTA, 'DATASETFINAL.csv')
+CAMINHO_SQLITE = os.path.join(CAMINHO_PASTA, 'DATASETFINAL.db')
 
 COLUNAS_DEMOGRAFICAS = [
     'CS_SEXO', 'NU_IDADE_N', 'TP_IDADE', 'CS_GESTANT', 'CS_RACA', 'CS_ESCOL_N'
@@ -123,8 +125,12 @@ def main():
     os.makedirs(CAMINHO_PASTA, exist_ok=True)
     df.to_csv(CAMINHO_FINAL, sep=';', index=False)
 
+    with sqlite3.connect(CAMINHO_SQLITE) as con:
+        df.to_sql('srag', con, if_exists='replace', index=False)
+
     print('Dataset completo gerado com sucesso!')
-    print(f'Arquivo: {CAMINHO_FINAL}')
+    print(f'Arquivo CSV: {CAMINHO_FINAL}')
+    print(f'Banco SQLite: {CAMINHO_SQLITE}')
     print(f'Formato: {df.shape}')
     print('Distribuição do alvo:')
     print(df['OBITO'].value_counts().sort_index())
