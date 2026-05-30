@@ -3,3 +3,6 @@
 /apagar
 /.vscode
 OLD
+*.pyc
+.openclaude
+.claude

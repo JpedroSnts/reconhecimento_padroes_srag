@@ -1,112 +1,140 @@
-import pandas as pd
 import glob
 import os
+import sqlite3
+
 import numpy as np
+import pandas as pd
 from ydata_profiling import ProfileReport
 
-caminho_pasta = 'datasets'
-arquivos = glob.glob(os.path.join(caminho_pasta, "INFLUD*.csv"))
+CAMINHO_PASTA = 'datasets'
+PADRAO_ARQUIVOS = os.path.join(CAMINHO_PASTA, 'INFLUD*.csv')
+CAMINHO_FINAL = os.path.join(CAMINHO_PASTA, 'DATASETFINAL.csv')
+CAMINHO_SQLITE = os.path.join(CAMINHO_PASTA, 'DATASETFINAL.db')
 
-# OTIMIZAÇÃO: Mantivemos apenas as colunas que seu Random Forest realmente usa + colunas de controle
-colunas_desejadas = [
-    'CS_SEXO', 'NU_IDADE_N', 'TP_IDADE', 'PUERPERA', 'CARDIOPATI', 
-    'HEMATOLOGI', 'SIND_DOWN', 'HEPATICA', 'ASMA', 'DIABETES', 
-    'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE', 'RENAL', 'OBESIDADE',
-    'OUT_MORBI', 'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 
-    'DISPNEIA', 'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO', 
-    'OUTRO_SIN', 'ANTIVIRAL', 'HOSPITAL', 'UTI', 'SUPORT_VEN', 'EVOLUCAO',
-    'FADIGA', 'PERD_OLFT', 'PERD_PALA', 'VACINA', 'VACINA_COV'
+COLUNAS_DEMOGRAFICAS = [
+    'CS_SEXO', 'NU_IDADE_N', 'TP_IDADE', 'CS_GESTANT', 'CS_RACA', 'CS_ESCOL_N'
 ]
 
-print("Lendo e unificando os arquivos da pasta...")
-df_filtrado = pd.concat(
-    [pd.read_csv(f, sep=";", usecols=colunas_desejadas, encoding='latin-1', low_memory=False) for f in arquivos], 
-    ignore_index=True
-)
-
-# Filtra a coluna EVOLUCAO para manter apenas 1 (Cura) e 2 (Óbito)
-df_filtrado = df_filtrado[df_filtrado['EVOLUCAO'].isin([1, 2, '1', '2', 1.0, 2.0])]
-
-print("Processando e corrigindo variáveis...")
-
-# 1. CORREÇÃO DA IDADE (A armadilha do TP_IDADE)
-df_filtrado['TP_IDADE'] = pd.to_numeric(df_filtrado['TP_IDADE'], errors='coerce')
-df_filtrado['NU_IDADE_N'] = pd.to_numeric(df_filtrado['NU_IDADE_N'], errors='coerce')
-
-# Converte dias e meses para frações de ano de forma correta
-df_filtrado.loc[df_filtrado['TP_IDADE'] == 1, 'NU_IDADE_N'] = df_filtrado['NU_IDADE_N'] / 365
-df_filtrado.loc[df_filtrado['TP_IDADE'] == 2, 'NU_IDADE_N'] = df_filtrado['NU_IDADE_N'] / 12
-df_filtrado = df_filtrado.drop(columns=['TP_IDADE'])
-
-# Filtros físicos de idade
-df_filtrado = df_filtrado[df_filtrado['NU_IDADE_N'] <= 110]
-df_filtrado['NU_IDADE_N'] = df_filtrado['NU_IDADE_N'].abs()
-
-
-# 2. CORREÇÃO DO CS_SEXO (Evita que a variável vire tudo zero no to_numeric)
-# Padroniza para string limpa e mapeia: Masculino = 0, Feminino = 1. Ignorados viram NaN.
-df_filtrado['CS_SEXO'] = df_filtrado['CS_SEXO'].astype(str).str.upper().str.strip()
-df_filtrado['CS_SEXO'] = df_filtrado['CS_SEXO'].map({'M': 0, '1': 0, '1.0': 0, 'F': 1, '2': 1, '2.0': 1})
-
-
-# 3. MAPEAMENTO CLÍNICO (Isolando os ignorados '9' e vazios como NaN para exclusão futura)
-colunas_clinicas = [
-   'PUERPERA', 'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 'HEPATICA', 
-    'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE', 
-    'RENAL', 'OBESIDADE', 'OUT_MORBI', 'NOSOCOMIAL', 'FEBRE', 'TOSSE', 
-    'GARGANTA', 'DISPNEIA', 'DESC_RESP', 'SATURACAO', 'DIARREIA', 
-    'VOMITO', 'OUTRO_SIN', 'ANTIVIRAL', 'HOSPITAL', 'UTI', 
-    'PERD_OLFT', 'FADIGA', 'PERD_PALA', 'VACINA', 'VACINA_COV'
+COLUNAS_BINARIAS = [
+    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA',
+    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO',
+    'DOR_ABD', 'FADIGA', 'FATOR_RISC',
+    'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 'HEPATICA',
+    'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE',
+    'RENAL', 'OBESIDADE', 'VACINA', 'HOSPITAL',
+    'VACINA_COV', 'ANTIVIRAL', 'UTI', 'AMOSTRA'
 ]
 
-for col in colunas_clinicas:
-    df_filtrado[col] = pd.to_numeric(df_filtrado[col], errors='coerce')
-    # 1 vira 1 (Sim), 2 vira 0 (Não). O código 9 (Ignorado) e brancos viram NaN automaticamente.
-    df_filtrado[col] = df_filtrado[col].map({1: 1, 2: 0})
+COLUNAS_CATEGORICAS = [
+    'CS_GESTANT', 'CS_RACA', 'SUPORT_VEN',
+     'PCR_RESUL', 'PCR_SARS2', 'CLASSI_FIN', 'CS_ESCOL_N'
+]
+
+COLUNAS_DESEJADAS = list(dict.fromkeys(
+    COLUNAS_DEMOGRAFICAS
+    + COLUNAS_BINARIAS
+    + COLUNAS_CATEGORICAS
+    + ['EVOLUCAO']
+))
 
 
-# 4. CORREÇÃO DO SUPORT_VEN (Inteligência clínica preservada)
-df_filtrado['SUPORT_VEN'] = pd.to_numeric(df_filtrado['SUPORT_VEN'], errors='coerce')
-df_filtrado['SUPORT_VEN'] = df_filtrado['SUPORT_VEN'].map({1: 1, 2: 1, 3: 0})
+def mapear_binaria(serie):
+    valores = pd.to_numeric(serie, errors='coerce')
+    return valores.map({1: 1, 2: 0}).fillna(-1).astype(int)
 
 
-# 5. EXCLUSÃO DIRETA DOS CASOS INCOMPLETOS (A sua escolha metodológica)
-# Como mapeamos tudo o que era '9' ou vazio para NaN, o dropna vai eliminar exatamente essas linhas ruins.
-colunas_para_validar = colunas_clinicas + ['CS_SEXO', 'SUPORT_VEN']
-df_filtrado = df_filtrado.dropna(subset=colunas_para_validar)
+def mapear_categorica(serie):
+    valores = pd.to_numeric(serie, errors='coerce')
+    return valores.where(~valores.isin([9, 99]), -1).fillna(-1).astype(int)
 
 
-# 6. CRIAÇÃO DA FAIXA ETÁRIA (Feita após o dropna para evitar distorções)
-limites_idade = [0, 5, 9, 19, 59, float('inf')]
-categorias_idade = [1, 2, 3, 4, 5]
+def corrigir_idade(df):
+    df['TP_IDADE'] = pd.to_numeric(df['TP_IDADE'], errors='coerce')
+    df['NU_IDADE_N'] = pd.to_numeric(df['NU_IDADE_N'], errors='coerce')
 
-df_filtrado['FAIXA_ETARIA'] = pd.cut(
-    df_filtrado['NU_IDADE_N'], 
-    bins=limites_idade, 
-    labels=categorias_idade, 
-    include_lowest=True
-).astype(int)
+    idade_anos = df['NU_IDADE_N'].astype(float).copy()
+    idade_anos.loc[df['TP_IDADE'] == 1] = idade_anos.loc[df['TP_IDADE'] == 1] / 365
+    idade_anos.loc[df['TP_IDADE'] == 2] = idade_anos.loc[df['TP_IDADE'] == 2] / 12
 
-# Removemos a idade bruta porque o modelo usará apenas a FAIXA_ETARIA categórica
-df_filtrado = df_filtrado.drop(columns=['NU_IDADE_N'])
+    df['IDADE_ANOS'] = idade_anos.abs()
+    df = df[(df['IDADE_ANOS'].notna()) & (df['IDADE_ANOS'] <= 110)].copy()
 
-
-# 7. MAPEAMENTO DA VARIÁVEL ALVO (OBITO)
-df_filtrado['EVOLUCAO'] = pd.to_numeric(df_filtrado['EVOLUCAO'], errors='coerce')
-df_filtrado['OBITO'] = df_filtrado['EVOLUCAO'].map({1: 0, 2: 1})
-df_filtrado = df_filtrado.drop(columns=['EVOLUCAO'])
+    return df.drop(columns=['NU_IDADE_N', 'TP_IDADE'])
 
 
-# 8. SALVAMENTO DO DATASET
-print("Salvando o novo dataset final...")
-os.makedirs('datasets', exist_ok=True)
-
-print("Dataset filtrado e unificado com sucesso! Tamanho final das observações completas:", df_filtrado.shape)
-
-caminho_final = 'datasets/DATASETFINAL.csv'
-df_filtrado.to_csv(caminho_final, sep=';', index=False)
-
-print(f"Sucesso! Seu novo dataset está limpo, padronizado e salvo como '{caminho_final}'.")
+def corrigir_sexo(df):
+    sexo = df['CS_SEXO'].astype(str).str.upper().str.strip()
+    df['CS_SEXO'] = sexo.map({
+        'M': 0, '1': 0, '1.0': 0,
+        'F': 1, '2': 1, '2.0': 1,
+    }).fillna(-1).astype(int)
+    return df
 
 
-ProfileReport(df_filtrado, title="Relatório - DATASETFINAL", minimal=True).to_file("relatorio_binarizado.html")
+def main():
+    if os.path.exists(CAMINHO_FINAL):
+        os.remove(CAMINHO_FINAL)
+
+    arquivos = sorted(glob.glob(PADRAO_ARQUIVOS))
+
+    if not arquivos:
+        raise FileNotFoundError(f'Nenhum arquivo encontrado em {PADRAO_ARQUIVOS}')
+
+    print('Lendo e unificando arquivos INFLUD...')
+    df = pd.concat(
+        [
+            pd.read_csv(
+                arquivo,
+                sep=';',
+                usecols=COLUNAS_DESEJADAS,
+                encoding='latin-1',
+                low_memory=False,
+            )
+            for arquivo in arquivos
+        ],
+        ignore_index=True,
+    )
+
+    print('Filtrando evolução para Cura e Óbito...')
+    df['EVOLUCAO'] = pd.to_numeric(df['EVOLUCAO'], errors='coerce')
+    df = df[df['EVOLUCAO'].isin([1, 2])].copy()
+    df['OBITO'] = df['EVOLUCAO'].map({1: 0, 2: 1}).astype(int)
+    df = df.drop(columns=['EVOLUCAO'])
+
+    print('Corrigindo idade...')
+    df = corrigir_idade(df)
+
+    print('Mapeando variáveis binárias e categóricas...')
+    for coluna in COLUNAS_BINARIAS:
+        df[coluna] = mapear_binaria(df[coluna])
+
+    for coluna in COLUNAS_CATEGORICAS:
+        df[coluna] = mapear_categorica(df[coluna])
+
+    colunas_finais = [
+        'CS_SEXO', 'IDADE_ANOS',
+        *COLUNAS_BINARIAS,
+        *COLUNAS_CATEGORICAS,
+        'OBITO',
+    ]
+    colunas_finais = list(dict.fromkeys(colunas_finais))
+    df = df[colunas_finais]
+
+    ProfileReport(df, title="Relatório - DATASETFINAL", minimal=True).to_file("relatorio.html")
+
+    os.makedirs(CAMINHO_PASTA, exist_ok=True)
+    df.to_csv(CAMINHO_FINAL, sep=';', index=False)
+
+    with sqlite3.connect(CAMINHO_SQLITE) as con:
+        df.to_sql('srag', con, if_exists='replace', index=False)
+
+    print('Dataset completo gerado com sucesso!')
+    print(f'Arquivo CSV: {CAMINHO_FINAL}')
+    print(f'Banco SQLite: {CAMINHO_SQLITE}')
+    print(f'Formato: {df.shape}')
+    print('Distribuição do alvo:')
+    print(df['OBITO'].value_counts().sort_index())
+
+
+if __name__ == '__main__':
+    main()
