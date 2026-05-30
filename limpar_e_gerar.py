@@ -10,16 +10,22 @@ PADRAO_ARQUIVOS = os.path.join(CAMINHO_PASTA, 'INFLUD*.csv')
 CAMINHO_FINAL = os.path.join(CAMINHO_PASTA, 'DATASETFINAL_COMPLETO.csv')
 
 COLUNAS_DEMOGRAFICAS = [
-    'NU_IDADE_N', 'TP_IDADE', 'CS_ESCOL_N'
+    'CS_SEXO', 'NU_IDADE_N', 'TP_IDADE', 'CS_GESTANT', 'CS_RACA', 'CS_ESCOL_N'
 ]
 
 COLUNAS_BINARIAS = [
-    'UTI', 'FATOR_RISC', 'VACINA_COV', 'HOSPITAL', 'SATURACAO',
-    'TOSSE', 'CARDIOPATI'
+    'NOSOCOMIAL', 'FEBRE', 'TOSSE', 'GARGANTA', 'DISPNEIA',
+    'DESC_RESP', 'SATURACAO', 'DIARREIA', 'VOMITO',
+    'DOR_ABD', 'FADIGA', 'FATOR_RISC',
+    'CARDIOPATI', 'HEMATOLOGI', 'SIND_DOWN', 'HEPATICA',
+    'ASMA', 'DIABETES', 'NEUROLOGIC', 'PNEUMOPATI', 'IMUNODEPRE',
+    'RENAL', 'OBESIDADE', 'VACINA', 'HOSPITAL',
+    'VACINA_COV', 'ANTIVIRAL', 'UTI', 'AMOSTRA'
 ]
 
 COLUNAS_CATEGORICAS = [
-    'SUPORT_VEN', 'CLASSI_FIN', 'PCR_SARS2', 'CS_ESCOL_N'
+    'CS_GESTANT', 'CS_RACA', 'SUPORT_VEN',
+     'PCR_RESUL', 'PCR_SARS2', 'CLASSI_FIN', 'CS_ESCOL_N'
 ]
 
 COLUNAS_DESEJADAS = list(dict.fromkeys(
@@ -104,9 +110,10 @@ def main():
         df[coluna] = mapear_categorica(df[coluna])
 
     colunas_finais = [
-        'SUPORT_VEN', 'IDADE_ANOS', 'UTI', 'CLASSI_FIN', 'FATOR_RISC',
-        'VACINA_COV', 'HOSPITAL', 'SATURACAO', 'TOSSE', 'CARDIOPATI',
-        'PCR_SARS2', 'OBITO', 'CS_ESCOL_N'
+        'CS_SEXO', 'IDADE_ANOS',
+        *COLUNAS_BINARIAS,
+        *COLUNAS_CATEGORICAS,
+        'OBITO',
     ]
     colunas_finais = list(dict.fromkeys(colunas_finais))
     df = df[colunas_finais]
