@@ -9,7 +9,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
-    precision_recall_curve,
     roc_auc_score,
     roc_curve,
 )
@@ -91,18 +90,7 @@ def main():
     plt.tight_layout()
     plt.savefig(f'{PASTA}/curva_roc_rf.png', dpi=150)
     plt.close()
-
-    # Curva Precision-Recall
-    precision, recall, _ = precision_recall_curve(y_test, y_prob)
-    plt.figure(figsize=(7, 5))
-    plt.plot(recall, precision, color='steelblue', lw=2)
-    plt.xlabel('Recall - Óbito')
-    plt.ylabel('Precision - Óbito')
-    plt.title('Curva Precision-Recall - Random Forest')
-    plt.tight_layout()
-    plt.savefig(f'{PASTA}/curva_precision_recall_rf.png', dpi=150)
-    plt.close()
-
+    
     # Importância das features
     importancias = modelo.feature_importances_
     indices = np.argsort(importancias)[::-1]
